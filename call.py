@@ -1,4 +1,4 @@
-from llm_sdk.llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model
 import json
 import sys
 
@@ -20,7 +20,13 @@ except Exception as e:
     exit(1)
 
 fun_d = json.loads(funcs)
+json_prompts = json.loads(prompts)
+
+Small_LLM_Model.
+
+
 print(fun_d)
+print(json_prompts)
 
 
 # pass here funcs and prompts

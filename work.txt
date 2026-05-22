@@ -1,0 +1,9 @@
+to install llm_sdk dependencies i had to use this command
+
+inside my virt_env and llm_sdk folder
+
+uv sync --active --cache-dir "/home/vsudak/sgoinfre/.cache"
+resource page https://stackoverflow.com/questions/79664325/how-to-change-the-uv-cache-directory
+could not install dependencies without changeing cache folder
+
+
