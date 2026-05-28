@@ -1,29 +1,35 @@
 from llm_sdk import Small_LLM_Model
 import json
 import sys
-from typing import cast
+from typing import cast, Any
 import math
 import heapq
 
 
 class Tokenvalidation():
-    valid_chars = r"0123456789abcdefghijklmnopqrstuvwxyz[]{},"
+    valid_chars = r"0123456789abcdefghijklmnopqrstuvwxyz[]{},_"
+
     def __init__(self, fn_list: list[str]):
         self.fn_list = fn_list
-    
 
 
-def generate_text(model: Small_LLM_Model, prompt_text, max_new_tokens=64) -> str:
-    input_ids = model.encode(prompt_text)[0].tolist()
+def generate_text(
+        model: Small_LLM_Model, prompt_text, max_new_tokens=64) -> str:
 
+    input_ids = model.encode(prompt_text)
+    prompt_l = len(input_ids)
+    print(input_ids)
+    # [0].tolist()
     for _ in range(max_new_tokens):
         logits = model.get_logits_from_input_ids(input_ids)
-        # 
+        # here i need to pick a valid logit,
+        # not the one with highest probability
         next_token_id = max(range(len(logits)), key=lambda i: logits[i])
-        
+
         input_ids.append(next_token_id)
 
-    return model.decode(input_ids)
+    return model.decode(input_ids[prompt_l:])
+
 
 def build_function_call_prompt(functions, user_prompt):
     return f"""
@@ -32,7 +38,7 @@ def build_function_call_prompt(functions, user_prompt):
                 choose exactly one function from the list below.
 
                 Available functions:
-                {json.dumps(functions, indent=2)}
+                {functions}
 
                 Return only valid JSON in this format:
                 [
@@ -52,17 +58,24 @@ def build_function_call_prompt(functions, user_prompt):
                 {user_prompt}
                 """
 
+
 s_llm = Small_LLM_Model()
 
 try:
     with open("data/input/functions_definition.json") as func_def:
-        funcs = func_def.read()
+        # funcs = func_def.read()
+        # print("funcs before json load\n", funcs, type(funcs))
+        funs = json.load(func_def, object_hook=dict[str, Any])
+        print("funcs after json load\n", funs, type(funs))
     with open("data/input/function_calling_tests.json") as usr_input:
-        prompts = usr_input.read()
+        # prompts = usr_input.read()
+        # print("prompts before json load\n", prompts, type(prompts))
+        prompts_json = json.load(usr_input)
+        print("prompts after json load\n", prompts, type(prompts))
     with open(s_llm.get_path_to_vocab_file()) as v:
         # vocab = v.read()
         vocab = json.load(v)
-        print(vocab)
+        # print(vocab)
 except FileNotFoundError as e:
     print(str(e), file=sys.stderr)
     exit(1)
@@ -73,6 +86,9 @@ except Exception as e:
     print(str(e), file=sys.stderr)
     exit(1)
 
+function_names: list = [p["name"] for p in funs]
+prompts_list = [p["prompt"] for p in prompts_json]
+generate_text(s_llm, prompts_list[0], )
 
 # vocab = vocab.strip(r"{}")
 # vocab_list = vocab.split(",")
