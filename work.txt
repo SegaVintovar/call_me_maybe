@@ -7,3 +7,9 @@ resource page https://stackoverflow.com/questions/79664325/how-to-change-the-uv-
 could not install dependencies without changeing cache folder
 
 
+firstly i am getting fn_name, storing it into dict(json)
+then by knowing the function i am asking ai to fulfill parameter values
+using user prompt
+
+split generation into diff stages
+figure out 

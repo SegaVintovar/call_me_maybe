@@ -4,7 +4,9 @@ import sys
 from typing import cast, Any
 import math
 import heapq
+import re
 
+# valid_token_set_fn_choose = 
 
 class Tokenvalidation():
     valid_chars = r"0123456789abcdefghijklmnopqrstuvwxyz[]{},_"
@@ -14,14 +16,15 @@ class Tokenvalidation():
 
 
 def generate_text(
-        model: Small_LLM_Model, prompt_text, max_new_tokens=128) -> str:
+        model: Small_LLM_Model, prompt_text, max_new_tokens=12) -> str:
 
     input_ids = model.encode(prompt_text)[0].tolist()
     prompt_l = len(input_ids)
-    start_ids = model.encode(ai_help(prompt_text))[0].tolist()
-    input_ids += start_ids
-    print(input_ids)
-    # [0].tolist()
+    # start_ids = model.encode(ai_help(prompt_text))[0].tolist()
+    # input_ids += start_ids
+    
+    # print(input_ids)
+
     for _ in range(max_new_tokens):
         logits = model.get_logits_from_input_ids(input_ids)
         # here i need to pick a valid logit,
@@ -30,36 +33,21 @@ def generate_text(
         # print(logits[:10])
         max_logit = max(logits)
         next_token_id = logits.index(max_logit)
-
+        print(model.decode(next_token_id))
         input_ids.append(next_token_id)
 
-    return model.decode(input_ids[prompt_l:])
+    return model.decode(input_ids)
 
 
-def build_function_call_prompt(functions, user_prompt):
-    return f'You are a function selection engine.\
-To answer users prompt, choose exactly one function from the list below.\
+def build_first_prompt(functions, user_prompt):
+    return f'choose right function\n\
 Available functions:{functions}\n\
-User prompt: {user_prompt}' +\
-        r'Answer only in valid JSON format.\
-Follow the schema below:\n\
-[\
-    {\
-    "prompt": <user_prompt>,\
-    "name": <function_name>,\
-    "parameters": {"param_1": value}\
-    }\
-]'
-                    # ,\
-                    # {\
-                    # "prompt": "Reverse the string "hello"",\
-                    # "name": "fn_reverse_string",\
-                    # "parameters": {"s": "hello"}\
-                    # }\
+User prompt: {user_prompt}\n' +\
+r'Answer only with function name: '
 
 
-def ai_help(fn_name: str) -> str:
-    return r"[{'prompt':" + fn_name
+def ai_help(user_prompt: str) -> str:
+    return r"[{'prompt': " + user_prompt
 
 
 s_llm = Small_LLM_Model()
@@ -69,12 +57,12 @@ try:
         # funcs = func_def.read()
         # print("funcs before json load\n", funcs, type(funcs))
         funs = json.load(func_def, object_hook=dict[str, Any])
-        print("funcs after json load\n", funs, type(funs))
+        # print("funcs after json load\n", funs, type(funs))
     with open("data/input/function_calling_tests.json") as usr_input:
         # prompts = usr_input.read()
         # print("prompts before json load\n", prompts, type(prompts))
         prompts_json = json.load(usr_input)
-        print("prompts after json load\n", prompts_json, type(prompts_json))
+        # print("prompts after json load\n", prompts_json, type(prompts_json))
     with open(s_llm.get_path_to_vocab_file()) as v:
         # vocab = v.read()
         vocab = json.load(v)
@@ -91,13 +79,23 @@ except Exception as e:
 
 function_names: list = [p["name"] for p in funs]
 prompts_list = [p["prompt"] for p in prompts_json]
-print(prompts_list[4])
-p = build_function_call_prompt(funs, prompts_list[4])
+print(prompts_list[8])
+p = build_first_prompt(function_names, prompts_list[8])
+p += ai_help(prompts_list[8])
 print(p)
 text = generate_text(s_llm, p)
-print(text)
-# vocab = vocab.strip(r"{}")
-# vocab_list = vocab.split(",")
+for fn in function_names:
+    if fn in text:
+        ai_fn_choice = fn
+print(ai_fn_choice)
+i = 0
+for ch in text:
+    if ch == "[":
+        break
+    i += 1
+with open("text.txt", "w") as f:
+    f.write(text)
+print(text[i:])
 
 # fun_d = json.loads(funcs)
 # json_user_prompts = json.loads(prompts)
