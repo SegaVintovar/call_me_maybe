@@ -198,8 +198,11 @@ class AiProcessor():
 
             next_token_id = logits.index(max_logit)
             gen_tokens.append(next_token_id)
-            if self.model.decode(gen_tokens) in self.func_name_list:
-                break
+            for fn in self.func_name_list:
+                if fn in self.model.decode(gen_tokens):
+                    break
+            # if self.model.decode(gen_tokens) in self.func_name_list:
+            #     break
             input_ids.append(next_token_id)
 
         return self.model.decode(gen_tokens)
