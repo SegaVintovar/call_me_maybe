@@ -26,6 +26,7 @@ class Answer(BaseModel):
 
     # @model_validator(mode="after")
     # def post(self):
+    # here i need to validate parameters: numbers and strings
     #     ...
 
 
@@ -152,10 +153,12 @@ class AiProcessor():
         Here we are prompting AI to make it choose an function
         """
         for p in self.user_prompts_str:
+            print(f"\nAnalyzing user prompt: {p}")
             prompt = self.build_first_prompt(p)
             text = self.generate_text(prompt)
             for fn in self.func_name_list:
                 if fn in text:
+                    print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
                     self.answers.append(
                         Answer(prompt=p, name=fn, params={}))
                     break
@@ -179,8 +182,9 @@ class AiProcessor():
 
     def build_first_prompt(self, user_prompt):
         return f'choose right function\n\
-    Available functions:{self.func_name_list}\n\
-    User prompt: {user_prompt}\n' +\
+Available functions:{self.func_name_list}\n\
+User prompt: {user_prompt}\n' +\
+            "       "\
             r'Answer only with function name: [{"name": "'
 
     def generate_text(self, prompt_text: str, max_new_tokens=12) -> str:
@@ -221,6 +225,13 @@ class AiProcessor():
         with open((path + name), "w") as f:
             f.write(json.dumps(result, indent=2))
 
+    def another_method(self):
+        for a in self.answers:
+            fn = a.name
+            for f in self.func_list:
+                if f.name == fn:
+                    ...
+                    break
 
 # def generate_text(
 #         model: Small_LLM_Model,
