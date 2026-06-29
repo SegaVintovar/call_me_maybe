@@ -41,22 +41,7 @@ class Params(BaseModel):
     parameters: dict
 
 
-class FuncDef(BaseModel):
-    """
-    Here we are storing func definition
-    """
-    name: str = Field(pattern=r"^fn_")
-    description: str
-    parameters: dict
-    # or "number" or "string"
-    returns: dict
 
-    @model_validator(mode="after")
-    def post(self):
-        if self.returns["type"] not in ["string", "number"]:
-            raise ValueError(
-                "Function return type can be only 'string' or 'number'")
-        return self
 
 
 @dataclass
@@ -277,6 +262,7 @@ User prompt: {user_prompt}\n' +\
 
 
 def main():
+    # here we are checking for the given arguments
 
     s_llm = Small_LLM_Model()
 
