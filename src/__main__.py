@@ -26,12 +26,19 @@ if len(args) >= 1:
 try:
     with open(path_to_fn_defs, 'r') as file:
         func_defs = json.load(file)
+        print(type(func_defs))
     # print("File data =", data)
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_fn_defs} file.", file=sys.stderr)
     exit(1)
+except PermissionError:
+    print(f"Permission denied {path_to_fn_defs}", file=sys.stderr)
+    exit(1)
 except json.JSONDecodeError as e:
-    print(f"Invalid JSON syntax in {path_to_fn_defs} file:", e)
+    print(f"Invalid JSON syntax in {path_to_fn_defs} file:",
+          e,
+          file=sys.stderr)
+    exit(1)
 except Exception as e:
     print(str(e), file=sys.stderr)
     exit(1)
@@ -39,14 +46,19 @@ except Exception as e:
 try:
     with open(path_to_usr_prmpts, 'r') as file:
         user_prompts = json.load(file)
+        print(type(user_prompts))
     # print("File data =", data)
 except FileNotFoundError:
-    print(f"Error: Could not find {path_to_usr_prmpts} file.")
+    print(f"Error: Could not find {path_to_usr_prmpts} file.", file=sys.stderr)
+    exit(1)
+except PermissionError:
+    print(f"Permission denied {path_to_usr_prmpts}", file=sys.stderr)
     exit(1)
 except json.JSONDecodeError as e:
     print(f"Invalid JSON syntax in {path_to_usr_prmpts} file:",
           e,
           file=sys.stderr)
+    exit(1)
 except Exception as e:
     print(e, file=sys.stderr)
     exit(1)
@@ -63,8 +75,8 @@ except Exception as e:
 model = Small_LLM_Model()
 my_ai = AiProcessor(
     model,
-    path_to_usr_prmpts,
-    path_to_fn_defs,
+    func_defs,
+    user_prompts,
     path_to_output
     )
 # mb prepare for start/to answer?instead of post init

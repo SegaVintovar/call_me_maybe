@@ -4,6 +4,7 @@ from src.models.answer import Answer
 from dataclasses import dataclass
 from typing import Any
 import json
+import os
 from llm_sdk import Small_LLM_Model
 
 
@@ -27,53 +28,58 @@ class AiProcessor():
     """
     def __init__(self,
                  model: Small_LLM_Model,
-                 path_to_prompts: str =
-                 "data/input/function_calling_tests.json",
-                 path_to_functions: str =
-                 "data/input/functions_definition.json",
+                 function_defenitions_d: dict,
+                 user_prompts_d: dict,
+                 #  path_to_prompts: str =
+                 #  "data/input/function_calling_tests.json",
+                 #  path_to_functions: str =
+                 #  "data/input/functions_definition.json",
                  path_to_output: str = "data/output/function_calls.json"
                  ) -> None:
 
         self.model = model
-        self.path_to_prompts = path_to_prompts
-        self.path_to_functions = path_to_functions
+        self.fn_defs_d = function_defenitions_d
+        self.user_prompts_d = user_prompts_d
+
         self.path_to_output = path_to_output
+
         self.func_list: list[Function] = []
-        # do i need it here
-        self.func_name_list: list[str] = []
         self.user_prompts: list[UserPrompt] = []
+
         # do I need it here
+        self.func_name_list: list[str] = []
         self.user_prompts_str: list[str] = []
+
         self.answers: list[Answer] = []
         self.vocab: dict
         self.__post_init__()
 
     def __post_init__(self) -> None:
         # try:
-        with open(self.path_to_prompts) as f:
-            all_prompts = json.load(f)
-            for p in all_prompts:
-                self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
-                self.user_prompts_str.append(p["prompt"])
-        with open(self.path_to_functions) as f:
-            all_fn_defs = json.load(f, object_hook=dict[str, Any])
-            for fn in all_fn_defs:
-                name = fn["name"]
-                description = fn["description"]
-                params = fn["parameters"]
-                returns = fn["returns"]
-                print(fn)
-                self.func_list.append(
-                    Function(**fn)
-                )
-                # self.func_list.append(
-                #     FuncDef(
-                #         name=name,
-                #         description=description,
-                #         parameters=params,
-                #         returns=returns)
-                #         )
-                self.func_name_list.append(name)
+
+        for p in self.user_prompts_d:
+            self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
+            self.user_prompts_str.append(p["prompt"])
+        # with open(self.path_to_functions) as f:
+        #     all_fn_defs = json.load(f, object_hook=dict[str, Any])
+
+        for fn in self.fn_defs_d:
+            name = fn["name"]
+            description = fn["description"]
+            params = fn["parameters"]
+            returns = fn["returns"]
+            # print(fn)
+            self.func_list.append(
+                Function(**fn)
+            )
+            # self.func_list.append(
+            #     FuncDef(
+            #         name=name,
+            #         description=description,
+            #         parameters=params,
+            #         returns=returns)
+            #         )
+            self.func_name_list.append(name)
 
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
@@ -107,18 +113,21 @@ class AiProcessor():
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        self.stage1()
+        for p in self.user_prompts_d:
+            self.process(p["prompt"])
+        # self.stage1()
         # self.stage2()
         self.compile_json()
 
-        ...
+    def process(self, prompt: str):
+        answer = self.stage1(prompt)
+        self.stage2(answer)
 
     def build_first_prompt(self, user_prompt):
-        return f'choose right function\n\
-Available functions:{self.func_name_list}\n\
-User prompt: {user_prompt}\n' +\
-            "       "\
-            r'Answer only with function name: [{"name": "'
+        return ('choose right function\n'
+                f'Available functions: {self.func_name_list}\n'
+                'User prompt: {user_prompt}\n'
+                r'Answer only with function name: [{"name": "')
 
     def generate_text(self, prompt_text: str, max_new_tokens=12) -> str:
         # handle different stages 
@@ -150,6 +159,7 @@ User prompt: {user_prompt}\n' +\
 
     def compile_json(self):
         result = []
+        print((a.name for a in self.answers))
         for ans in self.answers:
             tmp = {}
             tmp["prompt"] = ans.prompt
@@ -181,3 +191,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+for prompt in self.user_prompts_d:
+    self.process(prompt["prompt"])
+        # here we are performing stage 1 and 2 on the prompt
+        # and storing the result into the list of Answers
