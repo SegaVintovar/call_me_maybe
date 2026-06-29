@@ -5,7 +5,6 @@ run:
 debug:
 # 	pdb
 clean:
-clean:
 	find . -path ./.venv -prune -o -type d -name __pycache__ -exec rm -rf {} +
 	find . -path ./.venv -prune -o -type d -name .mypy_cache -exec rm -rf {} +
 lint:

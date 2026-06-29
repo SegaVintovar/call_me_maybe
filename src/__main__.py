@@ -27,7 +27,6 @@ try:
     with open(path_to_fn_defs, 'r') as file:
         func_defs = json.load(file)
         print(type(func_defs))
-    # print("File data =", data)
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_fn_defs} file.", file=sys.stderr)
     exit(1)
@@ -47,7 +46,6 @@ try:
     with open(path_to_usr_prmpts, 'r') as file:
         user_prompts = json.load(file)
         print(type(user_prompts))
-    # print("File data =", data)
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_usr_prmpts} file.", file=sys.stderr)
     exit(1)
@@ -63,15 +61,7 @@ except Exception as e:
     print(e, file=sys.stderr)
     exit(1)
 
-# try:
-#     with open(path_to_output, 'w') as output_file:
-#         data = json.load(output_file)
-#     # print("File data =", data)
-# except Exception:
-#     print("Error: Could not create output file.")
 
-
-# get all of the fn_def and user_prompts
 model = Small_LLM_Model()
 my_ai = AiProcessor(
     model,

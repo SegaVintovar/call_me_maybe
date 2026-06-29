@@ -65,13 +65,7 @@ class AiProcessor():
 
         for fn in self.fn_defs_d:
             name = fn["name"]
-            description = fn["description"]
-            params = fn["parameters"]
-            returns = fn["returns"]
-            # print(fn)
-            self.func_list.append(
-                Function(**fn)
-            )
+            self.func_list.append(Function(**fn))
             # self.func_list.append(
             #     FuncDef(
             #         name=name,
@@ -85,29 +79,34 @@ class AiProcessor():
             vocab = json.load(v)
         self.vocab = vocab
 
-    def stage1(self):
+    def stage1(self, prompt) -> str:
         """
         Here we are prompting AI to make it choose an function
         """
-        for p in self.user_prompts_str:
-            print(f"\nAnalyzing user prompt: {p}")
-            prompt = self.build_first_prompt(p)
-            text = self.generate_text(prompt)
-            for fn in self.func_name_list:
-                if fn in text:
-                    print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
-                    self.answers.append(
-                        Answer(prompt=p, name=fn, params={}))
-                    break
-            # tmp break
-            break
+        ans = ""
+        print(f"\nAnalyzing user prompt: {prompt}")
+        prompt = self.build_first_prompt(p)
+        text = self.generate_text(prompt)
+        for fn in self.func_name_list:
+            if fn in text:
+                print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
+                self.answers.append(
+                    Answer(prompt=p, name=fn, params={}))
+                break
+        # tmp break
         ...
 
-    def stage2(self):
+    def stage2(self, fn_name: str):
         # according to the choosen function, define parameters
         # by using function defenition and user prompt
         # constrain the generation by parameter type
         # and it presence in the prompt
+        fn_we_use: dict
+        for f_d in self.fn_defs_d:
+            if f_d["name"] == fn_name:
+                fn_we_use = f_d
+                break
+        
         ...
 
     def run(self):
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     main()
 
 
-for prompt in self.user_prompts_d:
-    self.process(prompt["prompt"])
-        # here we are performing stage 1 and 2 on the prompt
-        # and storing the result into the list of Answers
+# for prompt in self.user_prompts_d:
+#     self.process(prompt["prompt"])
+#         # here we are performing stage 1 and 2 on the prompt
+#         # and storing the result into the list of Answers
