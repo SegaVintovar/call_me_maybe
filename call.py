@@ -129,6 +129,9 @@ class AiProcessor():
                 #         returns=returns)
                 #         )
                 self.func_name_list.append(name)
+        
+        with open(self.model.get_path_to_vocab_file(), "r") as v:
+            vocab = v.read()
 
         # except FileNotFoundError as e:
         #     print(str(e), file=sys.stderr)
@@ -199,7 +202,9 @@ User prompt: {user_prompt}\n' +\
             # not the one with highest probability
 
             max_logit = max(logits)
-
+            for i, t in enumerate(self.vocab):
+                if not t.values[0].startwith("fn_"):
+                    logits[i] = 0
             next_token_id = logits.index(max_logit)
             gen_tokens.append(next_token_id)
             for fn in self.func_name_list:
