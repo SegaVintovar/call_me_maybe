@@ -85,13 +85,14 @@ class AiProcessor():
         """
         ans = ""
         print(f"\nAnalyzing user prompt: {prompt}")
-        prompt = self.build_first_prompt(p)
-        text = self.generate_text(prompt)
+        p = self.build_first_prompt(prompt)
+        text = self.generate_text(p)
+        print(text)
         for fn in self.func_name_list:
             if fn in text:
                 print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
                 self.answers.append(
-                    Answer(prompt=p, name=fn, params={}))
+                    Answer(prompt=prompt, name=fn, params={}))
                 break
         # tmp break
         ...
@@ -125,8 +126,8 @@ class AiProcessor():
     def build_first_prompt(self, user_prompt):
         return ('choose right function\n'
                 f'Available functions: {self.func_name_list}\n'
-                'User prompt: {user_prompt}\n'
-                r'Answer only with function name: [{"name": "')
+                f'User prompt: {user_prompt}\n'
+                r'Answer only with function name: [{"name": "fn_')
 
     def generate_text(self, prompt_text: str, max_new_tokens=12) -> str:
         # handle different stages 
@@ -165,10 +166,12 @@ class AiProcessor():
             tmp["name"] = ans.name
             result.append(tmp)
         print(result)
-        path = "data/output/"
-        name = "function_calling_results.json"
+        p = self.path_to_output.split("/")
+        name = p.pop(-1)
+        path = "/".join(p)
+        
         os.makedirs(path, exist_ok=True)
-        with open((path + name), "w") as f:
+        with open((path + name), mode="w") as f:
             f.write(json.dumps(result, indent=2))
 
     def another_method(self):

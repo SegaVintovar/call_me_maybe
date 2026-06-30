@@ -26,7 +26,7 @@ if len(args) >= 1:
 try:
     with open(path_to_fn_defs, 'r') as file:
         func_defs = json.load(file)
-        print(type(func_defs))
+        # print(type(func_defs))
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_fn_defs} file.", file=sys.stderr)
     exit(1)
@@ -45,7 +45,7 @@ except Exception as e:
 try:
     with open(path_to_usr_prmpts, 'r') as file:
         user_prompts = json.load(file)
-        print(type(user_prompts))
+        # print(type(user_prompts))
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_usr_prmpts} file.", file=sys.stderr)
     exit(1)
