@@ -113,8 +113,9 @@ class AiProcessor():
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d:
-            self.process(p["prompt"])
+        # for p in self.user_prompts_d:
+        #     self.process(p["prompt"])
+        self.process(self.user_prompts_d[0])
         # self.stage1()
         # self.stage2()
         self.compile_json()
@@ -141,10 +142,10 @@ class AiProcessor():
             # not the one with highest probability
 
             # max_logit = max(logits)
-            for i, t in enumerate(self.vocab):
-                # print(i, t)
-                if not t.startswith("fn_"):
-                    logits[i] = float("-inf")
+            # for i, t in enumerate(self.vocab):
+            #     # print(i, t)
+            #     if not t.startswith("fn_"):
+            #         logits[i] = float("-inf")
             # next_token_id = logits.index(max_logit)
             next_token_id = max(range(len(logits)), key=lambda i: logits[i])
             gen_tokens.append(next_token_id)
