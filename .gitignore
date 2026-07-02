@@ -2,3 +2,6 @@ virt_env/
 llm_sdk/llm_sdk/__pycache__/
 .venv
 data/output/
+data/outputfunction_calls.json
+.env
+work.excalidraw

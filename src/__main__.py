@@ -62,7 +62,14 @@ except Exception as e:
     exit(1)
 
 
-model = Small_LLM_Model()
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+hf_token = os.getenv("HF_TOKEN")
+
+model = Small_LLM_Model(token=hf_token)
 my_ai = AiProcessor(
     model,
     func_defs,

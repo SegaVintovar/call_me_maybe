@@ -12,6 +12,3 @@ then by knowing the function i am asking ai to fulfill parameter values
 using user prompt
 
 split generation into diff stages
-figure out
-
-make 

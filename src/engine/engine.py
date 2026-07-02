@@ -52,6 +52,7 @@ class AiProcessor():
 
         self.answers: list[Answer] = []
         self.vocab: dict
+        self.vocab_invert: dict
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -78,6 +79,7 @@ class AiProcessor():
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
         self.vocab = vocab
+        
 
     def stage1(self, prompt) -> str:
         """
@@ -86,8 +88,9 @@ class AiProcessor():
         ans = ""
         print(f"\nAnalyzing user prompt: {prompt}")
         p = self.build_first_prompt(prompt)
-        text = self.generate_text(p)
-        print(text)
+        valid_tokens = self.what_is_valid()
+        text = self.generate_text(p, valid_tokens)
+        print("generated text: ", text)
         for fn in self.func_name_list:
             if fn in text:
                 print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
@@ -95,7 +98,15 @@ class AiProcessor():
                     Answer(prompt=prompt, name=fn, params={}))
                 break
         # tmp break
-        ...
+
+    def what_is_valid(self) -> set:
+        result = set()
+        for fn in self.func_name_list:
+            tmp = self.model.encode(fn)[0].tolist()
+            for t in tmp:
+                result.add(t)
+        print("valid tokens: ", result)
+        return result
 
     def stage2(self, fn_name: str):
         # according to the choosen function, define parameters
@@ -107,17 +118,17 @@ class AiProcessor():
             if f_d["name"] == fn_name:
                 fn_we_use = f_d
                 break
-        
+
         ...
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        # for p in self.user_prompts_d:
-        #     self.process(p["prompt"])
-        self.process(self.user_prompts_d[0])
-        # self.stage1()
-        # self.stage2()
+        for p in self.user_prompts_d[1:4]:
+            self.process(p["prompt"])
+
+        # version for development
+        # self.process(self.user_prompts_d[0])
         self.compile_json()
 
     def process(self, prompt: str):
@@ -125,29 +136,43 @@ class AiProcessor():
         self.stage2(answer)
 
     def build_first_prompt(self, user_prompt):
-        return ('choose right function\n'
+        return ('Choose right function\n'
                 f'Available functions: {self.func_name_list}\n'
                 f'User prompt: {user_prompt}\n'
-                r'Answer only with function name: [{"name": "fn_')
+                'Answer only with function name: fn_')
 
-    def generate_text(self, prompt_text: str, max_new_tokens=12) -> str:
-        # handle different stages 
+    def generate_text(
+            self,
+            prompt_text: str,
+            valid_tokens: set,
+            max_new_tokens=15
+            ) -> str:
+        # should it handle different stages ?
         input_ids = self.model.encode(prompt_text)[0].tolist()
         gen_tokens: list[float] = []
+        vt = valid_tokens.copy()
 
         for _ in range(max_new_tokens):
             logits = self.model.get_logits_from_input_ids(input_ids)
-
+            print("logits: ", logits[:5])
             # here i need to pick a valid logit,
             # not the one with highest probability
 
-            # max_logit = max(logits)
+            for i, lg in enumerate(logits):
+                self.vocab[i]
+                if lg not in vt:
+                    lg = float("-inf")
+
+            
             # for i, t in enumerate(self.vocab):
             #     # print(i, t)
             #     if not t.startswith("fn_"):
             #         logits[i] = float("-inf")
             # next_token_id = logits.index(max_logit)
             next_token_id = max(range(len(logits)), key=lambda i: logits[i])
+            
+            vt.pop(next_token_id)
+            
             gen_tokens.append(next_token_id)
             for fn in self.func_name_list:
                 if fn in self.model.decode(gen_tokens):
@@ -172,7 +197,7 @@ class AiProcessor():
         path = "/".join(p)
         
         os.makedirs(path, exist_ok=True)
-        with open((path + name), mode="w") as f:
+        with open((path + "/" + name), mode="w") as f:
             f.write(json.dumps(result, indent=2))
 
     def another_method(self):
@@ -192,9 +217,9 @@ def main():
     ai = AiProcessor(s_llm)
     ai.run()
 
+
 if __name__ == "__main__":
     main()
-
 
 # for prompt in self.user_prompts_d:
 #     self.process(prompt["prompt"])
