@@ -20,19 +20,19 @@ class Function(BaseModel):
         return self
 
 
-class FuncDef(BaseModel):
-    """
-    Here we are storing func definition
-    """
-    name: str = Field(pattern=r"^fn_")
-    description: str
-    parameters: dict
-    # or "number" or "string"
-    returns: dict
+# class FuncDef(BaseModel):
+#     """
+#     Here we are storing func definition
+#     """
+#     name: str = Field(pattern=r"^fn_")
+#     description: str
+#     parameters: dict
+#     # or "number" or "string"
+#     returns: dict
 
-    @model_validator(mode="after")
-    def post(self):
-        if self.returns["type"] not in ["string", "number"]:
-            raise ValueError(
-                "Function return type can be only 'string' or 'number'")
-        return self
+#     @model_validator(mode="after")
+#     def post(self):
+#         if self.returns["type"] not in ["string", "number"]:
+#             raise ValueError(
+#                 "Function return type can be only 'string' or 'number'")
+#         return self

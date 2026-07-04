@@ -52,7 +52,7 @@ class AiProcessor():
 
         self.answers: list[Answer] = []
         self.vocab: dict
-        self.vocab_invert: dict
+        self.vocab_invert: dict = {}
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -79,6 +79,9 @@ class AiProcessor():
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
         self.vocab = vocab
+        for k, v in self.vocab.items():
+            self.vocab_invert[v] = k
+        # print(self.vocab)
 
     def stage1(self, prompt) -> str:
         """
@@ -113,7 +116,7 @@ class AiProcessor():
         # by using function defenition and user prompt
         # constrain the generation by parameter type
         # and it presence in the prompt
-        fn_we_use: dict
+        fn_we_use = None
         for f_d in self.fn_defs_d:
             if f_d["name"] == fn_name:
                 fn_we_use = f_d
@@ -139,46 +142,43 @@ class AiProcessor():
         return ('Choose right function\n'
                 f'Available functions: {self.func_name_list}\n'
                 f'User prompt: {user_prompt}\n'
-                'Answer only with function name: fn_')
+                'Answer only with function name: ')
+
+    def mask_logits(self, logits, valid_tokens) -> list[float]:
+        ...
 
     def generate_text(
             self,
             prompt_text: str,
             valid_tokens: set,
-            max_new_tokens=15
+            max_new_tokens=20
             ) -> str:
         # should it handle different stages ?
+        # now it is for fn_name gen
         input_ids = self.model.encode(prompt_text)[0].tolist()
         gen_tokens: list[float] = []
         vt = valid_tokens.copy()
 
         for _ in range(max_new_tokens):
             logits = self.model.get_logits_from_input_ids(input_ids)
-            print("logits: ", logits[:5])
+            
             # here i need to pick a valid logit,
             # not the one with highest probability
 
-            for i, lg in enumerate(logits):
-                self.vocab[i]
-                if lg not in vt:
-                    lg = float("-inf")
+            for i in range(len(logits)):
+                # print(self.vocab_invert[i])
+                if i not in vt:
+                    logits[i] = float("-inf")
 
-            
-            # for i, t in enumerate(self.vocab):
-            #     # print(i, t)
-            #     if not t.startswith("fn_"):
-            #         logits[i] = float("-inf")
-            # next_token_id = logits.index(max_logit)
             next_token_id = max(range(len(logits)), key=lambda i: logits[i])
-            
-            vt.pop(next_token_id)
+
+            vt.discard(next_token_id)
             
             gen_tokens.append(next_token_id)
             for fn in self.func_name_list:
                 if fn in self.model.decode(gen_tokens):
-                    break
-            # if self.model.decode(gen_tokens) in self.func_name_list:
-            #     break
+                    return self.model.decode(gen_tokens)
+
             input_ids.append(next_token_id)
 
         return self.model.decode(gen_tokens)
