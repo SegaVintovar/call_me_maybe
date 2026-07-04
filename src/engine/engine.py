@@ -79,7 +79,6 @@ class AiProcessor():
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
         self.vocab = vocab
-        
 
     def stage1(self, prompt) -> str:
         """
@@ -96,8 +95,9 @@ class AiProcessor():
                 print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
                 self.answers.append(
                     Answer(prompt=prompt, name=fn, params={}))
+                ans = fn
                 break
-        # tmp break
+        return ans
 
     def what_is_valid(self) -> set:
         result = set()
@@ -118,7 +118,7 @@ class AiProcessor():
             if f_d["name"] == fn_name:
                 fn_we_use = f_d
                 break
-
+        print(fn_we_use)
         ...
 
     def run(self):
@@ -195,7 +195,7 @@ class AiProcessor():
         p = self.path_to_output.split("/")
         name = p.pop(-1)
         path = "/".join(p)
-        
+
         os.makedirs(path, exist_ok=True)
         with open((path + "/" + name), mode="w") as f:
             f.write(json.dumps(result, indent=2))

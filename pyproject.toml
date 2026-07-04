@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "pydantic>=2.13.4",
     "llm-sdk",
+    "dotenv>=0.9.9",
 ]
 
 [tool.uv.sources]
