@@ -26,7 +26,7 @@ if len(args) >= 1:
 try:
     with open(path_to_fn_defs, 'r') as file:
         func_defs = json.load(file)
-        # print(type(func_defs))
+        print(type(func_defs), ": ", func_defs)
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_fn_defs} file.", file=sys.stderr)
     exit(1)

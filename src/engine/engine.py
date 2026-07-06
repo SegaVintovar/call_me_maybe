@@ -28,7 +28,7 @@ class AiProcessor():
     """
     def __init__(self,
                  model: Small_LLM_Model,
-                 function_defenitions_d: dict,
+                 function_defenitions_d: list[dict],
                  user_prompts_d: dict,
                  #  path_to_prompts: str =
                  #  "data/input/function_calling_tests.json",
@@ -67,13 +67,7 @@ class AiProcessor():
         for fn in self.fn_defs_d:
             name = fn["name"]
             self.func_list.append(Function(**fn))
-            # self.func_list.append(
-            #     FuncDef(
-            #         name=name,
-            #         description=description,
-            #         parameters=params,
-            #         returns=returns)
-            #         )
+            # useful later
             self.func_name_list.append(name)
 
         with open(self.model.get_path_to_vocab_file(), "r") as v:
@@ -83,7 +77,7 @@ class AiProcessor():
             self.vocab_invert[v] = k
         # print(self.vocab)
 
-    def stage1(self, prompt) -> str:
+    def stage1(self, prompt) -> Answer:
         """
         Here we are prompting AI to make it choose an function
         """
@@ -96,9 +90,9 @@ class AiProcessor():
         for fn in self.func_name_list:
             if fn in text:
                 print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
-                self.answers.append(
-                    Answer(prompt=prompt, name=fn, params={}))
-                ans = fn
+                
+                ans = Answer(prompt=prompt, name=fn, params={})
+                self.answers.append(ans)
                 break
         return ans
 
@@ -111,23 +105,28 @@ class AiProcessor():
         print("valid tokens: ", result)
         return result
 
-    def stage2(self, fn_name: str):
+    def build_second_prompt(self, fn: Function) -> str:
+        for k, v in fn.parameters.items():
+            ...
+        return ("find all parameters for the function call"
+                f"{fn.parameters}")
+
+    def stage2(self, ans: Answer):
         # according to the choosen function, define parameters
         # by using function defenition and user prompt
         # constrain the generation by parameter type
         # and it presence in the prompt
-        fn_we_use = None
-        for f_d in self.fn_defs_d:
-            if f_d["name"] == fn_name:
-                fn_we_use = f_d
-                break
-        print(fn_we_use)
+        
+        for param, type in fn.parameters.items():
+            # ask LLM to generate each aparameter separetly
+            ...
+        
         ...
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d[1:4]:
+        for p in self.user_prompts_d[1:3]:
             self.process(p["prompt"])
 
         # version for development
@@ -151,7 +150,8 @@ class AiProcessor():
             self,
             prompt_text: str,
             valid_tokens: set,
-            max_new_tokens=20
+            max_new_tokens=20,
+            stage: str = "stage1"
             ) -> str:
         # should it handle different stages ?
         # now it is for fn_name gen
@@ -172,13 +172,15 @@ class AiProcessor():
 
             next_token_id = max(range(len(logits)), key=lambda i: logits[i])
 
-            vt.discard(next_token_id)
+            # vt.discard(next_token_id)
             
             gen_tokens.append(next_token_id)
-            for fn in self.func_name_list:
-                if fn in self.model.decode(gen_tokens):
-                    return self.model.decode(gen_tokens)
-
+            if stage == "stage1":
+                for fn in self.func_name_list:
+                    if fn in self.model.decode(gen_tokens):
+                        return self.model.decode(gen_tokens)
+            else:
+                ...
             input_ids.append(next_token_id)
 
         return self.model.decode(gen_tokens)
@@ -199,14 +201,6 @@ class AiProcessor():
         os.makedirs(path, exist_ok=True)
         with open((path + "/" + name), mode="w") as f:
             f.write(json.dumps(result, indent=2))
-
-    def another_method(self):
-        for a in self.answers:
-            fn = a.name
-            for f in self.func_list:
-                if f.name == fn:
-                    ...
-                    break
 
 
 def main():
