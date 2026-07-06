@@ -75,53 +75,6 @@ class AiProcessor():
         self.vocab = vocab
         for k, v in self.vocab.items():
             self.vocab_invert[v] = k
-        # print(self.vocab)
-
-    def stage1(self, prompt) -> Answer:
-        """
-        Here we are prompting AI to make it choose an function
-        """
-        ans = ""
-        print(f"\nAnalyzing user prompt: {prompt}")
-        p = self.build_first_prompt(prompt)
-        valid_tokens = self.what_is_valid()
-        text = self.generate_text(p, valid_tokens)
-        print("generated text: ", text)
-        for fn in self.func_name_list:
-            if fn in text:
-                print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
-                
-                ans = Answer(prompt=prompt, name=fn, params={})
-                self.answers.append(ans)
-                break
-        return ans
-
-    def what_is_valid(self) -> set:
-        result = set()
-        for fn in self.func_name_list:
-            tmp = self.model.encode(fn)[0].tolist()
-            for t in tmp:
-                result.add(t)
-        print("valid tokens: ", result)
-        return result
-
-    def build_second_prompt(self, fn: Function) -> str:
-        for k, v in fn.parameters.items():
-            ...
-        return ("find all parameters for the function call"
-                f"{fn.parameters}")
-
-    def stage2(self, ans: Answer):
-        # according to the choosen function, define parameters
-        # by using function defenition and user prompt
-        # constrain the generation by parameter type
-        # and it presence in the prompt
-        
-        for param, type in fn.parameters.items():
-            # ask LLM to generate each aparameter separetly
-            ...
-        
-        ...
 
     def run(self):
         # run stage 1 and then stage 2
@@ -132,16 +85,78 @@ class AiProcessor():
         # version for development
         # self.process(self.user_prompts_d[0])
         self.compile_json()
-
+    
     def process(self, prompt: str):
         answer = self.stage1(prompt)
         self.stage2(answer)
+
+    def stage1(self, prompt) -> Answer:
+        """
+        Here we are prompting AI to make it choose an function
+        """
+        ans = ""
+        print(f"\nAnalyzing user prompt: {prompt}")
+        p = self.build_first_prompt(prompt)
+        valid_tokens = self.what_is_valid_fn_name()
+        text = self.generate_text(p, valid_tokens)
+        print("generated text: ", text)
+        for fn in self.func_name_list:
+            if fn in text:
+                print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
+
+                ans = Answer(prompt=prompt, name=fn, params={})
+                self.answers.append(ans)
+                break
+        return ans
 
     def build_first_prompt(self, user_prompt):
         return ('Choose right function\n'
                 f'Available functions: {self.func_name_list}\n'
                 f'User prompt: {user_prompt}\n'
                 'Answer only with function name: ')
+
+    def what_is_valid_fn_name(self) -> set:
+        result = set()
+        for fn in self.func_name_list:
+            tmp = self.model.encode(fn)[0].tolist()
+            for t in tmp:
+                result.add(t)
+        print("valid tokens: ", result)
+        return result
+
+    def stage2(self, ans: Answer):
+        # according to the choosen function, define parameters
+        # by using function defenition and user prompt
+        # constrain the generation by parameter type
+        # and it presence in the prompt
+        fn_name = ans.name
+        prompt = ans.prompt
+        for fn in self.func_list:
+            if fn.name == fn_name:
+                parameters = fn.parameters
+                break
+        # print((type(parameters)))
+        for param, tp in parameters.items():
+            # ask LLM to generate each aparameter separetly
+            p = self.build_second_prompt(prompt, param, tp["type"])
+            if tp["type"] == "number":
+                valid_tokens = {1, 2, 3}
+            elif tp["type"] == "string":
+                valid_tokens = {4, 5, 6}
+            elif tp["type"] == "boolean":
+                valid_tokens = {
+                    (self.model.encode("True")[0].tolist() +
+                     self.model.encode("False")[0].tolist())
+                    }
+            ans.params[param] = self.generate_text(p, valid_tokens, stage=2)
+
+            ...
+
+    def build_second_prompt(
+            self, prompt: str, parameters: str, type: str) -> str:
+
+        return ("find all parameters for the function call"
+                f"{parameters}")
 
     def mask_logits(self, logits, valid_tokens) -> list[float]:
         ...
@@ -150,8 +165,8 @@ class AiProcessor():
             self,
             prompt_text: str,
             valid_tokens: set,
-            max_new_tokens=20,
-            stage: str = "stage1"
+            max_new_tokens: int = 20,
+            stage: int = 1
             ) -> str:
         # should it handle different stages ?
         # now it is for fn_name gen
@@ -175,7 +190,7 @@ class AiProcessor():
             # vt.discard(next_token_id)
             
             gen_tokens.append(next_token_id)
-            if stage == "stage1":
+            if stage == 1:
                 for fn in self.func_name_list:
                     if fn in self.model.decode(gen_tokens):
                         return self.model.decode(gen_tokens)
