@@ -53,6 +53,11 @@ class AiProcessor():
         self.answers: list[Answer] = []
         self.vocab: dict
         self.vocab_invert: dict = {}
+
+        self.valid_number_tokens = set()
+        self.valid_string_tokens = set()
+        self.valid_boolean_tokens = set()
+
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -75,11 +80,15 @@ class AiProcessor():
         self.vocab = vocab
         for k, v in self.vocab.items():
             self.vocab_invert[v] = k
+        
+        valid_number_chars = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", ".", ";"]
+        for ch in valid_number_chars:
+            self.valid_number_tokens.add(self.model.encode(ch))
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d[1:3]:
+        for p in self.user_prompts_d[0:2]:
             self.process(p["prompt"])
 
         # version for development
@@ -130,17 +139,18 @@ class AiProcessor():
         # constrain the generation by parameter type
         # and it presence in the prompt
         fn_name = ans.name
-        prompt = ans.prompt
+        usr_prompt = ans.prompt
         for fn in self.func_list:
             if fn.name == fn_name:
                 parameters = fn.parameters
+                function = fn
                 break
         # print((type(parameters)))
         for param, tp in parameters.items():
             # ask LLM to generate each aparameter separetly
-            p = self.build_second_prompt(prompt, param, tp["type"])
+            p = self.build_second_prompt(usr_prompt, function, param, tp["type"])
             if tp["type"] == "number":
-                valid_tokens = {1, 2, 3}
+                valid_tokens = self.valid_number_tokens
             elif tp["type"] == "string":
                 valid_tokens = {4, 5, 6}
             elif tp["type"] == "boolean":
@@ -148,15 +158,18 @@ class AiProcessor():
                     (self.model.encode("True")[0].tolist() +
                      self.model.encode("False")[0].tolist())
                     }
-            ans.params[param] = self.generate_text(p, valid_tokens, stage=2)
-
+            # here i need to generate only parameter by parameter
+            par = self.generate_text(p, valid_tokens, stage=2)
+            print(par)
+            ans.params[param] = par
             ...
 
     def build_second_prompt(
-            self, prompt: str, parameters: str, type: str) -> str:
-
-        return ("find all parameters for the function call"
-                f"{parameters}")
+            self, prompt: str, function: Function, parameter: str, type: str) -> str:
+        prmpt = (f"Here is the user request: {prompt}"
+                 f"The function is: {function.name} {function.description}"
+                 f"Give me the value of parameter {parameter} which is of type {type}")
+        return prmpt
 
     def mask_logits(self, logits, valid_tokens) -> list[float]:
         ...
@@ -195,7 +208,9 @@ class AiProcessor():
                     if fn in self.model.decode(gen_tokens):
                         return self.model.decode(gen_tokens)
             else:
-                ...
+                stop_token = self.model.encode(";")
+                if next_token_id == stop_token:
+                    return self.model.decode(gen_tokens[:-1])
             input_ids.append(next_token_id)
 
         return self.model.decode(gen_tokens)
