@@ -13,4 +13,4 @@ class Answer(BaseModel):
     #     self.params = params
     prompt: str
     name: str = Field(min_length=3)
-    params: dict
+    params: dict = {}

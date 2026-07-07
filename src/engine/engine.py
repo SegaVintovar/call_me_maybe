@@ -83,7 +83,7 @@ class AiProcessor():
         
         valid_number_chars = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", ".", ";"]
         for ch in valid_number_chars:
-            self.valid_number_tokens.add(self.model.encode(ch))
+            self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
 
     def run(self):
         # run stage 1 and then stage 2
@@ -91,10 +91,8 @@ class AiProcessor():
         for p in self.user_prompts_d[0:2]:
             self.process(p["prompt"])
 
-        # version for development
-        # self.process(self.user_prompts_d[0])
         self.compile_json()
-    
+
     def process(self, prompt: str):
         answer = self.stage1(prompt)
         self.stage2(answer)
@@ -148,9 +146,12 @@ class AiProcessor():
         # print((type(parameters)))
         for param, tp in parameters.items():
             # ask LLM to generate each aparameter separetly
-            p = self.build_second_prompt(usr_prompt, function, param, tp["type"])
+            p = self.build_second_prompt(
+                usr_prompt, function, param, tp["type"])
+            print("second prompt: ", p)
             if tp["type"] == "number":
                 valid_tokens = self.valid_number_tokens
+                print("stage2 valid tokens: ", valid_tokens)
             elif tp["type"] == "string":
                 valid_tokens = {4, 5, 6}
             elif tp["type"] == "boolean":
@@ -160,14 +161,13 @@ class AiProcessor():
                     }
             # here i need to generate only parameter by parameter
             par = self.generate_text(p, valid_tokens, stage=2)
-            print(par)
+            print("generated parameters: ", par)
             ans.params[param] = par
-            ...
 
     def build_second_prompt(
             self, prompt: str, function: Function, parameter: str, type: str) -> str:
         prmpt = (f"Here is the user request: {prompt}"
-                 f"The function is: {function.name} {function.description}"
+                 f"The function is: {function.__dict__}"
                  f"Give me the value of parameter {parameter} which is of type {type}")
         return prmpt
 
