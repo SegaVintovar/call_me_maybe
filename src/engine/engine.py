@@ -2,10 +2,10 @@ from src.models.func_def import Function
 from src.models.usr_prompt import UserPrompt
 from src.models.answer import Answer
 from dataclasses import dataclass
-from typing import Any
 import json
 import os
 from llm_sdk import Small_LLM_Model
+import re
 
 
 class Engine():
@@ -82,13 +82,23 @@ class AiProcessor():
             self.vocab_invert[v] = k
         
         valid_number_chars = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", ".", ";"]
-        for ch in valid_number_chars:
-            self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
+        for k, v in self.vocab_invert.items():
+            if re.match(r"^\d+\.\d", v):
+                self.valid_number_tokens.add(k)
+        # for ch in valid_number_chars:
+        #     self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
+
+        # valid_number_chars = set("0123456789-.;")
+        # self.valid_number_tokens = {
+        #     token_id
+        #     for token_id, token_str in self.vocab_invert.items()
+        #     if all(c in valid_number_chars for c in token_str)
+        # }
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d[0:2]:
+        for p in self.user_prompts_d[:2]:
             self.process(p["prompt"])
 
         self.compile_json()
@@ -152,6 +162,9 @@ class AiProcessor():
             if tp["type"] == "number":
                 valid_tokens = self.valid_number_tokens
                 print("stage2 valid tokens: ", valid_tokens)
+                # for vt in valid_tokens:
+                #     print(self.vocab_invert[vt], end=", ")
+                # print()
             elif tp["type"] == "string":
                 valid_tokens = {4, 5, 6}
             elif tp["type"] == "boolean":
@@ -166,9 +179,20 @@ class AiProcessor():
 
     def build_second_prompt(
             self, prompt: str, function: Function, parameter: str, type: str) -> str:
-        prmpt = (f"Here is the user request: {prompt}"
-                 f"The function is: {function.__dict__}"
-                 f"Give me the value of parameter {parameter} which is of type {type}")
+        
+        prmpt = ("Find and extract parameters from user prompt for the function call\n"
+                 f"Here is the user prompt: {prompt}\n"
+                 f"The function description is: {function.__dict__}\n"
+                 f"Return me the value of parameter '{parameter}' which "
+                 f"should be formatted as {"1.0" if type == "number" else ...}\n")
+        
+        prmpt = (f"Extract the value of parameter {parameter} from this user request.\n"
+                f"User request: {prompt}\n"
+                # f"Parameter '{parameter}' is the second number in the request."
+                # f"Output only the numeric value followed by ';', like this: X.X;"
+                "Output only the numeric value as a float followed by ';'"
+                )
+        
         return prmpt
 
     def mask_logits(self, logits, valid_tokens) -> list[float]:
@@ -222,6 +246,7 @@ class AiProcessor():
             tmp = {}
             tmp["prompt"] = ans.prompt
             tmp["name"] = ans.name
+            tmp["parameters"] = ans.params
             result.append(tmp)
         print(result)
         p = self.path_to_output.split("/")
