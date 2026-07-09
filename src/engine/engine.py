@@ -82,23 +82,27 @@ class AiProcessor():
             self.vocab_invert[v] = k
         
         valid_number_chars = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", ".", ";"]
-        for k, v in self.vocab_invert.items():
-            if re.match(r"^\d+\.\d", v):
-                self.valid_number_tokens.add(k)
+        # for k, v in self.vocab_invert.items():
+        #     if re.match(r"^\d+\.\d", v):
+        #         self.valid_number_tokens.add(k)
+
+
         # for ch in valid_number_chars:
         #     self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
 
-        # valid_number_chars = set("0123456789-.;")
-        # self.valid_number_tokens = {
-        #     token_id
-        #     for token_id, token_str in self.vocab_invert.items()
-        #     if all(c in valid_number_chars for c in token_str)
-        # }
+        valid_number_chars = set("0123456789-.;")
+        self.valid_number_tokens = {
+            token_id
+            for token_id, token_str in self.vocab_invert.items()
+            if all(c in valid_number_chars for c in token_str)
+        }
+        for t in self.valid_number_tokens:
+            print(self.model.decode(t))
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d[:2]:
+        for p in self.user_prompts_d[6:8]:
             self.process(p["prompt"])
 
         self.compile_json()
@@ -154,10 +158,11 @@ class AiProcessor():
                 function = fn
                 break
         # print((type(parameters)))
+        tmp = ""
         for param, tp in parameters.items():
             # ask LLM to generate each aparameter separetly
             p = self.build_second_prompt(
-                usr_prompt, function, param, tp["type"])
+                usr_prompt, function, param, tp["type"], tmp)
             print("second prompt: ", p)
             if tp["type"] == "number":
                 valid_tokens = self.valid_number_tokens
@@ -173,26 +178,36 @@ class AiProcessor():
                      self.model.encode("False")[0].tolist())
                     }
             # here i need to generate only parameter by parameter
-            par = self.generate_text(p, valid_tokens, stage=2)
+            par = self.generate_text(p, valid_tokens, max_new_tokens=10, stage=2)
             print("generated parameters: ", par)
+            tmp = param + "=" + par
+            if tp["type"] == "number":
+                par = float(par)
             ans.params[param] = par
 
     def build_second_prompt(
-            self, prompt: str, function: Function, parameter: str, type: str) -> str:
+            self, prompt: str, function: Function, parameter: str, type: str, already_gen: str) -> str:
         
         prmpt = ("Find and extract parameters from user prompt for the function call\n"
                  f"Here is the user prompt: {prompt}\n"
                  f"The function description is: {function.__dict__}\n"
-                 f"Return me the value of parameter '{parameter}' which "
-                 f"should be formatted as {"1.0" if type == "number" else ...}\n")
+                 f"should be formatted as float. For example: {"'1.0'" if type == "number" else ...}\n")
         
-        prmpt = (f"Extract the value of parameter {parameter} from this user request.\n"
-                f"User request: {prompt}\n"
-                # f"Parameter '{parameter}' is the second number in the request."
-                # f"Output only the numeric value followed by ';', like this: X.X;"
-                "Output only the numeric value as a float followed by ';'"
-                )
-        
+        # prmpt = (f"Extract the value of parameter {parameter} from this user request.\n"
+        #          f"User request: {prompt}\n"
+        #          # f"Parameter '{parameter}' is the second number in the request."
+        #          # f"Output only the numeric value followed by ';', like this: X.X;"
+        #          "Output only the numeric value as a float followed by ';'"
+        #          )
+
+        # the best prompt so far
+        prmpt = (
+            "Find parameters for the function call in the user prompt\n"
+            f"{function.__dict__}\n"
+            f"{prompt}\n"
+            f"{function.name}({already_gen} {parameter}="
+        )
+
         return prmpt
 
     def mask_logits(self, logits, valid_tokens) -> list[float]:
