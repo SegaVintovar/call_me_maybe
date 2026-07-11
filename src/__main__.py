@@ -1,6 +1,6 @@
 import sys
 from .engine.engine import AiProcessor
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore
 import json
 from dotenv import load_dotenv
 

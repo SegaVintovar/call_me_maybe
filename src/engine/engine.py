@@ -4,7 +4,7 @@ from src.models.answer import Answer
 from dataclasses import dataclass
 import json
 import os
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore
 import time
 import string
 
@@ -73,8 +73,6 @@ class AiProcessor():
         for ch in valid_number_chars:
             self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
 
-        for t in self.valid_number_tokens:
-            print(self.model.decode(t))
         for prompt in self.user_prompts_str:
             vt = self.model.encode(prompt)[0].tolist()
             for t in vt:
@@ -243,7 +241,9 @@ class AiProcessor():
         result = []
 
         for ans in self.answers:
-            tmp = {}
+            tmp: dict[str, str | float | dict | None] = {
+                "prompt": None, "name": None, "parameters": None
+                }
             tmp["prompt"] = ans.prompt
             tmp["name"] = ans.name
             tmp["parameters"] = ans.params
