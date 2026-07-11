@@ -50,6 +50,7 @@ class AiProcessor():
         self.valid_number_tokens: set[int] = set()
         self.valid_string_tokens: set[int] = set()
         self.valid_boolean_tokens: set[int] = set()
+        self.stop_tokens: set[int] = set()
 
         self.__post_init__()
 
@@ -77,6 +78,10 @@ class AiProcessor():
 
         valid_number_chars = [
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", ".", ";"]
+        stop_chars = [' "', '"', ";"]
+
+        for c in stop_chars:
+            self.stop_tokens.add(self.model.encode(c)[0].tolist()[0])
 
         for ch in valid_number_chars:
             self.valid_number_tokens.add(self.model.encode(ch)[0].tolist()[0])
@@ -162,7 +167,7 @@ class AiProcessor():
                 usr_prompt, function, param, tp["type"], tmp)
             # print("second prompt: ", p)
             mnt = 10
-            if tp["type"] == "number":
+            if tp["type"] == "number" or tp["type"] == "integer":
                 valid_tokens = self.valid_number_tokens
             elif tp["type"] == "string":
                 valid_tokens = self.valid_string_tokens
@@ -184,6 +189,8 @@ class AiProcessor():
             if tp["type"] == "number":
                 # try
                 par = float(par)
+            elif tp["type"] == "integer":
+                par = int(par)
             elif tp["type"] == "string":
                 par = par.strip()
             ans.params[param] = par
@@ -223,7 +230,7 @@ class AiProcessor():
         input_ids = self.model.encode(prompt_text)[0].tolist()
         gen_tokens: list[float] = []
         vt = valid_tokens.copy()
-        stop_tokens = set()
+        stop_tokens = self.stop_tokens
 
         for _ in range(max_new_tokens):
             logits = self.model.get_logits_from_input_ids(input_ids)
@@ -240,8 +247,9 @@ class AiProcessor():
                     if fn in self.model.decode(gen_tokens):
                         return str(self.model.decode(gen_tokens))
             else:
-                for c in '";':
-                    stop_tokens.add(self.model.encode(c)[0].tolist()[0])
+                # for c in '";':
+                #     stop_tokens.add(self.model.encode(c)[0].tolist()[0])
+                # stop_tokens.add(self.model.encode(' "')[0].tolist()[0])
                 if next_token_id in stop_tokens:
                     return str(self.model.decode(gen_tokens[:-1]))
             input_ids.append(next_token_id)
