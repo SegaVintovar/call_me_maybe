@@ -101,8 +101,8 @@ class AiProcessor():
         self._compile_json()
 
     def _process(self, prompt: str) -> None:
-        answer = self.stage1(prompt)
-        self.stage2(answer)
+        answer = self._stage1(prompt)
+        self._stage2(answer)
 
     def _stage1(self, prompt: str) -> Answer:
         """
@@ -110,8 +110,8 @@ class AiProcessor():
         """
 
         print(f"\nAnalyzing user prompt: {prompt}")
-        p = self.build_first_prompt(prompt)
-        valid_tokens = self.what_is_valid_fn_name()
+        p = self._build_first_prompt(prompt)
+        valid_tokens = self._what_is_valid_fn_name()
         mt = 6
         text = self._generate_text(p, valid_tokens, max_new_tokens=mt)
         print("generated fn_name text: ", text)
@@ -205,9 +205,9 @@ class AiProcessor():
         prmpt = (
             "Find parameters for the function call in the user prompt\n"
             f"{function.__dict__}\n"
-            f"{prompt}\n"
-            "End generation with ;"
-            f"{function.name}({already_gen} {parameter}{start}"
+            f"User prompt: {prompt}\n"
+            "End generation with ;\n"
+            f"Function call: {function.name}({already_gen} {parameter}{start}"
         )
 
         return prmpt
