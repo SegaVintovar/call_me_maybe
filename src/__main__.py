@@ -2,6 +2,7 @@ import sys
 from .engine.engine import AiProcessor
 from llm_sdk import Small_LLM_Model
 import json
+from dotenv import load_dotenv
 
 
 # 1. Check arguments
@@ -60,10 +61,6 @@ except json.JSONDecodeError as e:
 except Exception as e:
     print(e, file=sys.stderr)
     exit(1)
-
-
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
+from typing import Self
 
 
 class Function(BaseModel):
@@ -8,7 +9,7 @@ class Function(BaseModel):
     returns: dict[str, str]
 
     @model_validator(mode="after")
-    def validate(self):
+    def validate_model(self) -> Self:
         if not self.name.startswith("fn_"):
             raise ValueError(
                 "Function model validation error: "
