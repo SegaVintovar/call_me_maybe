@@ -98,11 +98,16 @@ class AiProcessor():
         }
         for t in self.valid_number_tokens:
             print(self.model.decode(t))
+        for prompt in self.user_prompts_str:
+            vt = self.model.encode(prompt)[0].tolist()
+            for t in vt:
+                self.valid_string_tokens.add(t)
+        self.valid_string_tokens.add(self.model.encode('"')[0].tolist()[0])
 
     def run(self):
         # run stage 1 and then stage 2
         # use Answer class to store results
-        for p in self.user_prompts_d[6:8]:
+        for p in self.user_prompts_d:
             self.process(p["prompt"])
 
         self.compile_json()
@@ -119,7 +124,8 @@ class AiProcessor():
         print(f"\nAnalyzing user prompt: {prompt}")
         p = self.build_first_prompt(prompt)
         valid_tokens = self.what_is_valid_fn_name()
-        text = self.generate_text(p, valid_tokens)
+        mt = 6
+        text = self.generate_text(p, valid_tokens, max_new_tokens=mt)
         print("generated text: ", text)
         for fn in self.func_name_list:
             if fn in text:
@@ -152,6 +158,7 @@ class AiProcessor():
         # and it presence in the prompt
         fn_name = ans.name
         usr_prompt = ans.prompt
+        # self.valid_string_tokens.add(self.model.encode(usr_prompt)[0].tolist())
         for fn in self.func_list:
             if fn.name == fn_name:
                 parameters = fn.parameters
@@ -164,6 +171,7 @@ class AiProcessor():
             p = self.build_second_prompt(
                 usr_prompt, function, param, tp["type"], tmp)
             print("second prompt: ", p)
+            mnt = 10
             if tp["type"] == "number":
                 valid_tokens = self.valid_number_tokens
                 print("stage2 valid tokens: ", valid_tokens)
@@ -171,18 +179,24 @@ class AiProcessor():
                 #     print(self.vocab_invert[vt], end=", ")
                 # print()
             elif tp["type"] == "string":
-                valid_tokens = {4, 5, 6}
+                valid_tokens = self.valid_string_tokens
+                mnt = 15
             elif tp["type"] == "boolean":
+                mnt = 1
                 valid_tokens = {
-                    (self.model.encode("True")[0].tolist() +
-                     self.model.encode("False")[0].tolist())
+                    (self.model.encode("True")[0].tolist()[0] +
+                     self.model.encode("False")[0].tolist()[0])
                     }
             # here i need to generate only parameter by parameter
-            par = self.generate_text(p, valid_tokens, max_new_tokens=10, stage=2)
+            par = self.generate_text(p, valid_tokens, max_new_tokens=mnt, stage=2)
             print("generated parameters: ", par)
             tmp = param + "=" + par
             if tp["type"] == "number":
+                # try
                 par = float(par)
+            if tp["type"] == "string":
+                par = par.strip()
+                # par = par.split("'")[0]
             ans.params[param] = par
 
     def build_second_prompt(
@@ -201,11 +215,16 @@ class AiProcessor():
         #          )
 
         # the best prompt so far
+        if type == "string":
+            start = '="'
+        else:
+            start = "="
         prmpt = (
             "Find parameters for the function call in the user prompt\n"
             f"{function.__dict__}\n"
             f"{prompt}\n"
-            f"{function.name}({already_gen} {parameter}="
+            "End generation with ;"
+            f"{function.name}({already_gen} {parameter}{start}"
         )
 
         return prmpt
@@ -225,6 +244,7 @@ class AiProcessor():
         input_ids = self.model.encode(prompt_text)[0].tolist()
         gen_tokens: list[float] = []
         vt = valid_tokens.copy()
+        stop_tokens = set()
 
         for _ in range(max_new_tokens):
             logits = self.model.get_logits_from_input_ids(input_ids)
@@ -247,8 +267,10 @@ class AiProcessor():
                     if fn in self.model.decode(gen_tokens):
                         return self.model.decode(gen_tokens)
             else:
-                stop_token = self.model.encode(";")
-                if next_token_id == stop_token:
+                for c in '";':
+                    stop_tokens.add(self.model.encode(c)[0].tolist()[0])
+                print("stop token: ", stop_tokens)
+                if next_token_id in stop_tokens:
                     return self.model.decode(gen_tokens[:-1])
             input_ids.append(next_token_id)
 
