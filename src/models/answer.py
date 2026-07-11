@@ -11,6 +11,6 @@ class Answer(BaseModel):
     #     self.prompt = prompt
     #     self.name = name
     #     self.params = params
-    prompt: str
+    prompt: str = Field(min_length=1)
     name: str = Field(min_length=3)
     params: dict = {}

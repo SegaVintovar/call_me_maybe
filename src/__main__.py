@@ -15,19 +15,22 @@ if len(args) >= 1:
     while i < len(args):
         if args[i].startswith("--functions_definition"):
             path_to_fn_defs = args[i + 1]
+            print("path_to_fn_def: ", path_to_fn_defs)
             i += 1
         elif args[i].startswith("--input"):
             path_to_usr_prmpts = args[i + 1]
+            print("path_to_usr_prmpts: ", path_to_usr_prmpts)
             i += 1
         elif args[i].startswith("--output"):
             path_to_output = args[i + 1]
+            print("path_to_output: ", path_to_output)
             i += 1
         i += 1
 
 try:
     with open(path_to_fn_defs, 'r') as file:
         func_defs = json.load(file)
-        print(type(func_defs), ": ", func_defs)
+        # print(type(func_defs), ": ", func_defs)
 except FileNotFoundError:
     print(f"Error: Could not find {path_to_fn_defs} file.", file=sys.stderr)
     exit(1)

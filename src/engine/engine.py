@@ -7,12 +7,17 @@ import os
 from llm_sdk import Small_LLM_Model  # type: ignore
 import time
 import string
+import sys
 
 
 @dataclass
 class AiProcessor():
     """
-    Dataclass is needed for post init
+    Tool calling system
+
+    Takes: LLM model, tool defenitions and user prompts
+
+    Returns: function calls in JSON format
     """
     def __init__(self,
                  model: Small_LLM_Model,
@@ -49,17 +54,20 @@ class AiProcessor():
         self.__post_init__()
 
     def __post_init__(self) -> None:
-        # try:
+        try:
 
-        for p in self.user_prompts_d:
-            self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
-            self.user_prompts_str.append(p["prompt"])
+            for p in self.user_prompts_d:
+                self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
+                self.user_prompts_str.append(p["prompt"])
 
-        for fn in self.fn_defs_d:
-            name = fn["name"]
-            self.func_list.append(Function(**fn))
-            # useful later
-            self.func_name_list.append(name)
+            for fn in self.fn_defs_d:
+                name = fn["name"]
+                self.func_list.append(Function(**fn))
+                # useful later
+                self.func_name_list.append(name)
+        except Exception as e:
+            print("Validation Error: ", str(e), file=sys.stderr)
+            exit(1)
 
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
@@ -82,19 +90,21 @@ class AiProcessor():
             self.valid_string_tokens.add(self.model.encode(c)[0].tolist()[0])
 
     def run(self) -> None:
+        """
+        Method to process all given prompts"""
         # run stage 1 and then stage 2
         # use Answer class to store results
         start = time.time()
         for p in self.user_prompts_d:
-            self.process(p["prompt"])
+            self._process(p["prompt"])
         print("Prompt processing took: ", time.time() - start, " seconds")
-        self.compile_json()
+        self._compile_json()
 
-    def process(self, prompt: str) -> None:
+    def _process(self, prompt: str) -> None:
         answer = self.stage1(prompt)
         self.stage2(answer)
 
-    def stage1(self, prompt: str) -> Answer:
+    def _stage1(self, prompt: str) -> Answer:
         """
         Here we are prompting AI to make it choose an function
         """
@@ -103,24 +113,25 @@ class AiProcessor():
         p = self.build_first_prompt(prompt)
         valid_tokens = self.what_is_valid_fn_name()
         mt = 6
-        text = self.generate_text(p, valid_tokens, max_new_tokens=mt)
-        print("generated text: ", text)
+        text = self._generate_text(p, valid_tokens, max_new_tokens=mt)
+        print("generated fn_name text: ", text)
         for fn in self.func_name_list:
             if fn in text:
                 print(f"SOLUTION FOUND\n==============\n\n{fn}\n")
 
                 ans = Answer(prompt=prompt, name=fn, params={})
                 self.answers.append(ans)
+
                 break
         return ans
 
-    def build_first_prompt(self, user_prompt: str) -> str:
+    def _build_first_prompt(self, user_prompt: str) -> str:
         return ('Choose right function\n'
                 f'Available functions: {self.func_name_list}\n'
                 f'User prompt: {user_prompt}\n'
                 'Answer only with function name: ')
 
-    def what_is_valid_fn_name(self) -> set:
+    def _what_is_valid_fn_name(self) -> set:
         result = set()
         for fn in self.func_name_list:
             tmp = self.model.encode(fn)[0].tolist()
@@ -129,7 +140,7 @@ class AiProcessor():
         print("valid tokens: ", result)
         return result
 
-    def stage2(self, ans: Answer) -> None:
+    def _stage2(self, ans: Answer) -> None:
         # according to the choosen function, define parameters
         # by using function defenition and user prompt
         # constrain the generation by parameter type
@@ -147,9 +158,9 @@ class AiProcessor():
         tmp = ""
         for param, tp in parameters.items():
             # ask LLM to generate each aparameter separetly
-            p = self.build_second_prompt(
+            p = self._build_second_prompt(
                 usr_prompt, function, param, tp["type"], tmp)
-            print("second prompt: ", p)
+            # print("second prompt: ", p)
             mnt = 10
             if tp["type"] == "number":
                 valid_tokens = self.valid_number_tokens
@@ -166,9 +177,9 @@ class AiProcessor():
                     self.model.encode("False")[0].tolist()[0]
                     }
             # here i need to generate only parameter by parameter
-            par = self.generate_text(
+            par = self._generate_text(
                 p, valid_tokens, max_new_tokens=mnt, stage=2)
-            print("generated parameters: ", param, "=", par)
+            print("generated parameter: ", param, "=", par)
             tmp = param + "=" + par
             if tp["type"] == "number":
                 # try
@@ -177,7 +188,7 @@ class AiProcessor():
                 par = par.strip()
             ans.params[param] = par
 
-    def build_second_prompt(
+    def _build_second_prompt(
             self,
             prompt: str,
             function: Function,
@@ -201,7 +212,7 @@ class AiProcessor():
 
         return prmpt
 
-    def generate_text(
+    def _generate_text(
             self,
             prompt_text: str,
             valid_tokens: set,
@@ -237,7 +248,7 @@ class AiProcessor():
 
         return str(self.model.decode(gen_tokens))
 
-    def compile_json(self) -> None:
+    def _compile_json(self) -> None:
         result = []
 
         for ans in self.answers:
