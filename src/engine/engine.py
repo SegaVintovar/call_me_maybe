@@ -6,7 +6,10 @@ import json
 import os
 from llm_sdk import Small_LLM_Model
 import re
+import string
 
+
+string.printable
 
 class Engine():
     def __init__(
@@ -184,8 +187,8 @@ class AiProcessor():
             elif tp["type"] == "boolean":
                 mnt = 1
                 valid_tokens = {
-                    (self.model.encode("True")[0].tolist()[0] +
-                     self.model.encode("False")[0].tolist()[0])
+                    self.model.encode("True")[0].tolist()[0],
+                     self.model.encode("False")[0].tolist()[0]
                     }
             # here i need to generate only parameter by parameter
             par = self.generate_text(p, valid_tokens, max_new_tokens=mnt, stage=2)
