@@ -1,6 +1,7 @@
 from src.models.func_def import Function
 from src.models.usr_prompt import UserPrompt
 from src.models.answer import Answer
+from src.models.param import Param
 from dataclasses import dataclass
 import json
 import os
@@ -55,20 +56,30 @@ class AiProcessor():
         self.__post_init__()
 
     def __post_init__(self) -> None:
-        try:
+        # try:
 
-            for p in self.user_prompts_d:
+        for p in self.user_prompts_d:
+            try:
                 self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
                 self.user_prompts_str.append(p["prompt"])
-
-            for fn in self.fn_defs_d:
-                name = fn["name"]
-                self.func_list.append(Function(**fn))
-                # useful later
-                self.func_name_list.append(name)
-        except Exception as e:
-            print("Validation Error: ", str(e), file=sys.stderr)
-            exit(1)
+            except Exception:
+                raise Exception("UserPrompt validation error")
+        for fn in self.fn_defs_d:
+            n = fn["name"]
+            description = fn["description"]
+            returns = fn["returns"]
+            parameters = [Param(name=k, tp=v["type"]) for k, v in fn["parameters"].items()]
+            self.func_list.append(
+                Function(
+                    name=n,
+                    description=description,
+                    parameters=parameters,
+                    returns=returns))
+            # useful later
+            self.func_name_list.append(n)
+        # except Exception as e:
+        #     print("Validation Error: ", str(e), file=sys.stderr)
+        #     exit(1)
 
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
@@ -131,8 +142,10 @@ class AiProcessor():
         return ans
 
     def _build_first_prompt(self, user_prompt: str) -> str:
+        funcs = {func["name"]: func["description"] for func in self.fn_defs_d}
+        
         return ('Choose right function\n'
-                f'Available functions: {self.func_name_list}\n'
+                f'Available functions: {self.fn_defs_d}\n'
                 f'User prompt: {user_prompt}\n'
                 'Answer only with function name: ')
 
@@ -161,21 +174,21 @@ class AiProcessor():
                 break
         # print((type(parameters)))
         tmp = ""
-        for param, tp in parameters.items():
+        for param in parameters:
             # ask LLM to generate each aparameter separetly
             p = self._build_second_prompt(
-                usr_prompt, function, param, tp["type"], tmp)
+                usr_prompt, function, param.name, param.tp, tmp)
             # print("second prompt: ", p)
             mnt = 10
-            if tp["type"] == "number" or tp["type"] == "integer":
+            if param.tp == "number" or param.tp == "integer":
                 valid_tokens = self.valid_number_tokens
-            elif tp["type"] == "string":
+            elif param.tp == "string":
                 valid_tokens = self.valid_string_tokens
-                if param == "replacement":
+                if param.name == "replacement":
                     mnt = 2
                 else:
                     mnt = 15
-            elif tp["type"] == "boolean":
+            elif param.tp == "boolean":
                 mnt = 1
                 valid_tokens = {
                     self.model.encode("True")[0].tolist()[0],
@@ -184,16 +197,17 @@ class AiProcessor():
             # here i need to generate only parameter by parameter
             par = self._generate_text(
                 p, valid_tokens, max_new_tokens=mnt, stage=2)
-            print("generated parameter: ", param, "=", par)
-            tmp = param + "=" + par
-            if tp["type"] == "number":
+            print("generated parameter: ", param.name, "=", par)
+            tmp = param.name + "=" + par
+            par = par.strip()
+            if param.tp == "number":
                 # try
                 par = float(par)
-            elif tp["type"] == "integer":
-                par = int(par)
-            elif tp["type"] == "string":
+            elif param.tp == "integer":
+                par = int(float(par))
+            elif param.tp == "string":
                 par = par.strip()
-            ans.params[param] = par
+            ans.params[param.name] = par
 
     def _build_second_prompt(
             self,

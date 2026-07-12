@@ -1,11 +1,12 @@
 from pydantic import BaseModel, Field, model_validator
 from typing import Self
+from .param import Param
 
 
 class Function(BaseModel):
     name: str = Field(min_length=4)
     description: str
-    parameters: dict[str, dict[str, str]]
+    parameters: list[Param]
     returns: dict[str, str]
 
     @model_validator(mode="after")
