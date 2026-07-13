@@ -147,7 +147,9 @@ class AiProcessor():
         return ans
 
     def _build_first_prompt(self, user_prompt: str) -> str:
-        # funcs = {func["name"]: func["description"] for func in self.fn_defs_d}
+        # funcs = {
+        # func["name"]: func["description"] for func in self.fn_defs_d
+        # }
 
         return ('Choose right function\n'
                 f'Available functions: {self.fn_defs_d}\n'
