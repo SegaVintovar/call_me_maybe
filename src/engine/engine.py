@@ -56,30 +56,35 @@ class AiProcessor():
         self.__post_init__()
 
     def __post_init__(self) -> None:
-        # try:
+        try:
 
-        for p in self.user_prompts_d:
-            try:
-                self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
-                self.user_prompts_str.append(p["prompt"])
-            except Exception:
-                raise Exception("UserPrompt validation error")
-        for fn in self.fn_defs_d:
-            n = fn["name"]
-            description = fn["description"]
-            returns = fn["returns"]
-            parameters = [Param(name=k, tp=v["type"]) for k, v in fn["parameters"].items()]
-            self.func_list.append(
-                Function(
-                    name=n,
-                    description=description,
-                    parameters=parameters,
-                    returns=returns))
-            # useful later
-            self.func_name_list.append(n)
-        # except Exception as e:
-        #     print("Validation Error: ", str(e), file=sys.stderr)
-        #     exit(1)
+            for p in self.user_prompts_d:
+                try:
+                    self.user_prompts.append(UserPrompt(prompt=p["prompt"]))
+                    self.user_prompts_str.append(p["prompt"])
+                except Exception:
+                    raise Exception("UserPrompt validation error")
+            for fn in self.fn_defs_d:
+                n = fn["name"]
+                description = fn["description"]
+                returns = fn["returns"]
+                parameters = [
+                    Param(
+                        name=k,
+                        tp=v["type"]
+                        ) for k, v in fn["parameters"].items()
+                        ]
+                self.func_list.append(
+                    Function(
+                        name=n,
+                        description=description,
+                        parameters=parameters,
+                        returns=returns))
+                # useful later
+                self.func_name_list.append(n)
+        except Exception as e:
+            print("Validation Error: ", str(e), file=sys.stderr)
+            exit(1)
 
         with open(self.model.get_path_to_vocab_file(), "r") as v:
             vocab = json.load(v)
@@ -142,8 +147,8 @@ class AiProcessor():
         return ans
 
     def _build_first_prompt(self, user_prompt: str) -> str:
-        funcs = {func["name"]: func["description"] for func in self.fn_defs_d}
-        
+        # funcs = {func["name"]: func["description"] for func in self.fn_defs_d}
+
         return ('Choose right function\n'
                 f'Available functions: {self.fn_defs_d}\n'
                 f'User prompt: {user_prompt}\n'
