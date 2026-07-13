@@ -71,10 +71,10 @@ load_dotenv()
 
 model = Small_LLM_Model()
 my_ai = AiProcessor(
-    model,
-    func_defs,
-    user_prompts,
-    path_to_output
+    model=model,
+    fn_defs_d=func_defs,
+    user_prompts_d=user_prompts,
+    path_to_output=path_to_output
     )
 # mb prepare for start/to answer?instead of post init
 

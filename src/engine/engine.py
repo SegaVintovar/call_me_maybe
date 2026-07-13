@@ -2,17 +2,18 @@ from src.models.func_def import Function
 from src.models.usr_prompt import UserPrompt
 from src.models.answer import Answer
 from src.models.param import Param
-from dataclasses import dataclass
+# from dataclasses import dataclass
 import json
 import os
 from llm_sdk import Small_LLM_Model  # type: ignore
 import time
 import string
 import sys
+from pydantic import BaseModel, model_validator, Field
+from typing import Self
 
 
-@dataclass
-class AiProcessor():
+class AiProcessor(BaseModel):
     """
     Tool calling system
 
@@ -20,42 +21,67 @@ class AiProcessor():
 
     Returns: function calls in JSON format
     """
-    def __init__(self,
-                 model: Small_LLM_Model,
-                 function_defenitions_d: list[dict],
-                 user_prompts_d: dict,
-                 #  path_to_prompts: str =
-                 #  "data/input/function_calling_tests.json",
-                 #  path_to_functions: str =
-                 #  "data/input/functions_definition.json",
-                 path_to_output: str = "data/output/function_calls.json"
-                 ) -> None:
+    # def __init__(self,
+    #              model: Small_LLM_Model,
+    #              function_defenitions_d: list[dict],
+    #              user_prompts_d: dict,
+    #              #  path_to_prompts: str =
+    #              #  "data/input/function_calling_tests.json",
+    #              #  path_to_functions: str =
+    #              #  "data/input/functions_definition.json",
+    #              path_to_output: str = "data/output/function_calls.json"
+    #              ) -> None:
 
-        self.model = model
-        self.fn_defs_d = function_defenitions_d
-        self.user_prompts_d = user_prompts_d
+    #     self.model = model
+    #     self.fn_defs_d = function_defenitions_d
+    #     self.user_prompts_d = user_prompts_d
 
-        self.path_to_output = path_to_output
+    #     self.path_to_output = path_to_output
 
-        self.func_list: list[Function] = []
-        self.user_prompts: list[UserPrompt] = []
+    #     self.func_list: list[Function] = []
+    #     self.user_prompts: list[UserPrompt] = []
 
-        # do I need it here
-        self.func_name_list: list[str] = []
-        self.user_prompts_str: list[str] = []
+    #     # do I need it here
+    #     self.func_name_list: list[str] = []
+    #     self.user_prompts_str: list[str] = []
 
-        self.answers: list[Answer] = []
-        self.vocab: dict
-        self.vocab_invert: dict = {}
+    #     self.answers: list[Answer] = []
+    #     self.vocab: dict
+    #     self.vocab_invert: dict = {}
 
-        self.valid_number_tokens: set[int] = set()
-        self.valid_string_tokens: set[int] = set()
-        self.valid_boolean_tokens: set[int] = set()
-        self.stop_tokens: set[int] = set()
+    #     self.valid_number_tokens: set[int] = set()
+    #     self.valid_string_tokens: set[int] = set()
+    #     self.valid_boolean_tokens: set[int] = set()
+    #     self.stop_tokens: set[int] = set()
 
-        self.__post_init__()
+    #     self.__post_init__()
 
-    def __post_init__(self) -> None:
+    model: Small_LLM_Model
+    fn_defs_d: list[dict]
+    user_prompts_d: list[dict]
+
+    path_to_output: str = "data/output/function_calls.json"
+
+    func_list: list[Function] = Field(default_factory=list)
+    user_prompts: list[UserPrompt] = Field(default_factory=list)
+
+    # do I need it here
+    func_name_list: list[str] = Field(default_factory=list)
+    user_prompts_str: list[str] = Field(default_factory=list)
+
+    answers: list[Answer] = Field(default_factory=list)
+    vocab: dict = Field(default_factory=dict)
+    vocab_invert: dict = Field(default_factory=dict)
+
+    valid_number_tokens: set[int] = Field(default_factory=set)
+    valid_string_tokens: set[int] = Field(default_factory=set)
+    valid_boolean_tokens: set[int] = Field(default_factory=set)
+    stop_tokens: set[int] = Field(default_factory=set)
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    @model_validator(mode="after")
+    def proc_init(self) -> Self:
         try:
 
             for p in self.user_prompts_d:
@@ -109,6 +135,8 @@ class AiProcessor():
         self.valid_string_tokens.add(self.model.encode('"')[0].tolist()[0])
         for c in string.printable:
             self.valid_string_tokens.add(self.model.encode(c)[0].tolist()[0])
+
+        return self
 
     def run(self) -> None:
         """
@@ -289,10 +317,14 @@ class AiProcessor():
             tmp["parameters"] = ans.params
             result.append(tmp)
         # print(result)
-        p = self.path_to_output.split("/")
-        name = p.pop(-1)
-        path = "/".join(p)
+        try:
+            p = self.path_to_output.split("/")
+            name = p.pop(-1)
+            path = "/".join(p)
 
-        os.makedirs(path, exist_ok=True)
-        with open((path + "/" + name), mode="w") as f:
-            f.write(json.dumps(result, indent=2))
+            os.makedirs(path, exist_ok=True)
+            with open((path + "/" + name), mode="w") as f:
+                f.write(json.dumps(result, indent=2))
+        except Exception as e:
+            print("Output file creation error: ", str(e), file=sys.stderr)
+            exit(1)
